@@ -1,0 +1,22 @@
+# Build artifacts
+target/
+*.class
+
+# Env / secrets
+.env
+application-local.properties
+
+# H2 database files
+*.mv.db
+*.trace.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log
