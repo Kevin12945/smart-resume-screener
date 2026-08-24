@@ -2,6 +2,7 @@ package com.screener.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -12,14 +13,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Thin wrapper around the Google Gemini API
- * (https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent).
+ * Thin wrapper around the Groq API (OpenAI-compatible chat completions endpoint,
+ * https://api.groq.com/openai/v1/chat/completions).
  *
- * Chosen because Google AI Studio offers a genuine free tier (no credit card,
- * no billing setup) - see https://aistudio.google.com to generate a key.
+ * Chosen because Groq offers a genuine free tier (no credit card, no billing
+ * setup) - get a key at https://console.groq.com/keys.
  *
- * Requires the GEMINI_API_KEY environment variable to be set at runtime.
- * The model name is configurable via `llm.gemini.model` in application.properties.
+ * Requires the GROQ_API_KEY environment variable to be set at runtime.
+ * The model name is configurable via `llm.groq.model` in application.properties.
  */
 @Service
 public class LlmService {
@@ -27,13 +28,13 @@ public class LlmService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${llm.gemini.api-key}")
+    @Value("${llm.groq.api-key}")
     private String apiKey;
 
-    @Value("${llm.gemini.base-url}")
+    @Value("${llm.groq.base-url}")
     private String baseUrl;
 
-    @Value("${llm.gemini.model}")
+    @Value("${llm.groq.model}")
     private String model;
 
     public LlmService(RestTemplate restTemplate) {
@@ -41,7 +42,7 @@ public class LlmService {
     }
 
     /**
-     * Sends a single-turn prompt to Gemini and returns the raw text of the response.
+     * Sends a single-turn prompt to Groq and returns the raw text of the response.
      *
      * @param systemPrompt instructions describing the task and required output format
      * @param userPrompt   the task-specific content (resume text, job description, etc.)
@@ -50,46 +51,41 @@ public class LlmService {
     public String complete(String systemPrompt, String userPrompt) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
-                    "GEMINI_API_KEY is not set. Export it before starting the application, e.g.\n" +
-                            "  export GEMINI_API_KEY=AIza...\n" +
-                            "Get a free key (no credit card) at https://aistudio.google.com/apikey");
+                    "GROQ_API_KEY is not set. Export it before starting the application, e.g.\n" +
+                            "  export GROQ_API_KEY=gsk_...\n" +
+                            "Get a free key (no credit card) at https://console.groq.com/keys");
         }
 
-        String url = baseUrl + "/" + model + ":generateContent";
-
         ObjectNode requestBody = objectMapper.createObjectNode();
+        requestBody.put("model", model);
 
-        ObjectNode systemInstruction = requestBody.putObject("system_instruction");
-        systemInstruction.putArray("parts").addObject().put("text", systemPrompt);
-
-        ObjectNode userContent = requestBody.putArray("contents").addObject();
-        userContent.putArray("parts").addObject().put("text", userPrompt);
+        ArrayNode messages = requestBody.putArray("messages");
+        ObjectNode systemMessage = messages.addObject();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", systemPrompt);
+        ObjectNode userMessage = messages.addObject();
+        userMessage.put("role", "user");
+        userMessage.put("content", userPrompt);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-goog-api-key", apiKey);
+        headers.setBearerAuth(apiKey);
 
         HttpEntity<String> request = new HttpEntity<>(requestBody.toString(), headers);
 
-        JsonNode response = restTemplate.exchange(url, HttpMethod.POST, request, JsonNode.class).getBody();
+        JsonNode response = restTemplate.exchange(baseUrl, HttpMethod.POST, request, JsonNode.class).getBody();
 
-        if (response == null || !response.has("candidates") || response.get("candidates").isEmpty()) {
+        if (response == null || !response.has("choices") || response.get("choices").isEmpty()) {
             throw new IllegalStateException("Empty response from LLM provider: " + response);
         }
 
-        JsonNode parts = response.get("candidates").get(0).path("content").path("parts");
-        StringBuilder text = new StringBuilder();
-        for (JsonNode part : parts) {
-            if (part.has("text")) {
-                text.append(part.get("text").asText());
-            }
-        }
+        String text = response.get("choices").get(0).path("message").path("content").asText("");
 
-        if (text.isEmpty()) {
+        if (text.isBlank()) {
             throw new IllegalStateException("LLM response contained no text content: " + response);
         }
 
-        return stripJsonFences(text.toString());
+        return stripJsonFences(text);
     }
 
     /** Removes ```json / ``` markdown fences if the model wraps its JSON output in them. */

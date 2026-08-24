@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Resume Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #e9eaed;
+    --panel: #ffffff;
+    --line: #d5d7dc;
+    --line-soft: #e4e5e9;
+    --text: #1b1d21;
+    --text-dim: #6b6f78;
+    --accent: #2454ff;
+    --accent-dim: #e8edff;
+    --good: #1f7a4c;
+    --good-bg: #e7f3ec;
+    --warn: #a3690a;
+    --warn-bg: #faf1de;
+    --bad: #b3261e;
+    --bad-bg: #fbeae9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  header.topbar {
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header.topbar .brand-row { display: flex; align-items: center; gap: 10px; }
+  header.topbar .brand-mark {
+    width: 26px; height: 26px;
+    background: var(--accent);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 13px;
+  }
+  header.topbar .brand {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+  }
+  header.topbar .brand-sub { color: var(--text-dim); font-weight: 400; font-size: 13px; margin-left: 4px; }
+  .status-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+  .status-dot.offline { background: var(--bad); }
+  .base-url-input {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    width: 176px;
+  }
+
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--line);
+    background: #fafafb;
+  }
+  .tab-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
+  .panel-head h2 {
+    font-size: 14.5px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.1px;
+  }
+  .panel-body { padding: 20px; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  input[type=text], textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 5px;
+    padding: 9px 11px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+    color: var(--text);
+    margin-bottom: 13px;
+  }
+  textarea { min-height: 76px; resize: vertical; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.5; }
+  input[type=text]:focus, textarea:focus, .base-url-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .btn:hover { background: #1c3fd6; }
+  .btn:active { background: #16359e; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn.secondary { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+  .btn.secondary:hover { background: var(--bg); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; margin-bottom: 4px; }
+  .pill {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    cursor: pointer;
+    color: var(--text);
+  }
+  .pill:hover { border-color: var(--accent); }
+  .pill.selected {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .pill.skill {
+    cursor: default;
+    background: var(--good-bg);
+    border-color: #c9e3d4;
+    color: var(--good);
+  }
+  .pill.skill:hover { border-color: #c9e3d4; }
+  .pill.skill.missing { background: var(--bad-bg); border-color: #f0cac7; color: var(--bad); }
+
+  .file-drop {
+    border: 1.5px dashed var(--line);
+    border-radius: 6px;
+    padding: 18px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12.5px;
+    margin-bottom: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .file-drop:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .file-drop.has-file { border-style: solid; border-color: var(--good); color: var(--text); background: var(--good-bg); }
+  #resumeFile { display: none; }
+
+  .extract-card {
+    margin-top: 16px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+  }
+  .extract-card h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin: 13px 0 6px; font-weight: 600; }
+  .extract-card h3:first-child { margin-top: 0; }
+  .exp-item, .edu-item { font-size: 13px; margin-bottom: 6px; line-height: 1.5; }
+  .exp-item .role { font-weight: 600; }
+
+  /* --- fit meter: signature element --- */
+  .meter-row { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+  .meter-block { flex-shrink: 0; width: 168px; }
+  .meter-score-line { display: flex; align-items: baseline; gap: 5px; margin-bottom: 8px; }
+  .meter-score-num { font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 700; line-height: 1; color: var(--good); }
+  .meter-score-num.warn { color: var(--warn); }
+  .meter-score-num.bad { color: var(--bad); }
+  .meter-score-den { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: var(--text-dim); }
+  .meter-ticks { display: flex; gap: 3px; }
+  .meter-tick { flex: 1; height: 8px; border-radius: 1px; background: var(--line-soft); }
+  .meter-tick.filled { background: var(--good); }
+  .meter-tick.filled.warn { background: var(--warn); }
+  .meter-tick.filled.bad { background: var(--bad); }
+  .meter-tick.anim { animation: fill-in 0.4s ease backwards; }
+  @keyframes fill-in { from { opacity: 0; transform: scaleY(0.3); } to { opacity: 1; transform: scaleY(1); } }
+
+  .justification { font-size: 13.5px; line-height: 1.6; flex: 1; min-width: 220px; color: var(--text); padding-top: 2px; }
+  .justification-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
+
+  .shortlist-table { width: 100%; border-collapse: collapse; }
+  .shortlist-row {
+    display: grid;
+    grid-template-columns: 28px 96px 1fr;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .shortlist-row:last-child { border-bottom: none; }
+  .shortlist-row:nth-child(odd) { background: #fbfbfc; margin: 0 -20px; padding-left: 20px; padding-right: 20px; width: calc(100% + 40px); }
+  .rank { font-family: 'IBM Plex Mono', monospace; color: var(--text-dim); font-size: 12.5px; }
+  .mini-meter { display: flex; align-items: center; gap: 7px; }
+  .mini-score { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 13.5px; color: var(--good); width: 16px; }
+  .mini-score.warn { color: var(--warn); }
+  .mini-score.bad { color: var(--bad); }
+  .mini-ticks { display: flex; gap: 2px; }
+  .mini-tick { width: 5px; height: 12px; border-radius: 1px; background: var(--line-soft); }
+  .mini-tick.filled { background: var(--good); }
+  .mini-tick.filled.warn { background: var(--warn); }
+  .mini-tick.filled.bad { background: var(--bad); }
+  .shortlist-name { font-weight: 600; font-size: 13.5px; }
+  .shortlist-just { font-size: 12px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
+
+  .empty-note {
+    color: var(--text-dim);
+    font-size: 12.5px;
+  }
+  .error-banner {
+    background: var(--bad-bg);
+    border: 1px solid #f0cac7;
+    color: var(--bad);
+    border-radius: 5px;
+    padding: 9px 13px;
+    font-size: 12.5px;
+    margin-bottom: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .field-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .meter-tick.anim { animation: none; }
+    .spinner { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand-row">
+    <div class="brand-mark">SR</div>
+    <div class="brand">Smart Resume Screener<span class="brand-sub">— screening console</span></div>
+  </div>
+  <div class="status-row">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText" class="mono">checking</span>
+    <input class="base-url-input mono" id="baseUrlInput" value="http://localhost:8080" spellcheck="false">
+  </div>
+</header>
+
+<main>
+
+  <!-- STEP 1: JOB DESCRIPTION -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="tab-num">01</span>
+      <h2>Job description</h2>
+    </div>
+    <div class="panel-body">
+      <label for="jdTitle">Title</label>
+      <input type="text" id="jdTitle" placeholder="e.g. Backend Engineer">
+      <label for="jdDesc">Description</label>
+      <textarea id="jdDesc" placeholder="Paste the responsibilities and requirements..."></textarea>
+      <div class="field-row">
+        <button class="btn" id="createJdBtn">Save job description</button>
+      </div>
+      <div id="jdError"></div>
+
+      <div style="margin-top:16px;">
+        <label>Saved roles — select one to run a match against</label>
+        <div class="pill-row" id="jdList"><span class="empty-note">No job descriptions yet.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: RESUME UPLOAD -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="tab-num">02</span>
+      <h2>Resume upload</h2>
+    </div>
+    <div class="panel-body">
+      <div class="file-drop" id="fileDrop">
+        <span id="fileDropLabel">Click to choose a resume — PDF or TXT</span>
+        <input type="file" id="resumeFile" accept=".pdf,.txt">
+      </div>
+      <div class="field-row">
+        <button class="btn" id="uploadBtn" disabled>Upload &amp; extract</button>
+      </div>
+      <div id="uploadError"></div>
+      <div id="extractResult"></div>
+
+      <div style="margin-top:18px;">
+        <label>Uploaded candidates — select one to run a match against</label>
+        <div class="pill-row" id="resumeList"><span class="empty-note">No resumes uploaded yet.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: MATCH -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="tab-num">03</span>
+      <h2>Match</h2>
+    </div>
+    <div class="panel-body">
+      <p class="empty-note" id="matchHint">Select a job description and a candidate above, then run the match.</p>
+      <div class="field-row">
+        <button class="btn" id="matchBtn" disabled>Run match</button>
+      </div>
+      <div id="matchError"></div>
+      <div id="matchResult" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <!-- STEP 4: SHORTLIST -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="tab-num">04</span>
+      <h2>Shortlist</h2>
+    </div>
+    <div class="panel-body">
+      <div class="field-row">
+        <button class="btn secondary" id="loadShortlistBtn" disabled>Load shortlist for selected role</button>
+      </div>
+      <div id="shortlistError"></div>
+      <div id="shortlistResult" style="margin-top:12px;"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  let baseUrl = document.getElementById('baseUrlInput').value.replace(/\/$/, '');
+  let selectedJdId = null;
+  let selectedResumeId = null;
+  let jobDescriptions = [];
+  let resumes = [];
+
+  const $ = (id) => document.getElementById(id);
+
+  function scoreClass(score) {
+    if (score >= 7) return '';
+    if (score >= 4) return 'warn';
+    return 'bad';
+  }
+
+  function renderTicks(score, size) {
+    const cls = scoreClass(score);
+    const tickClass = size === 'mini' ? 'mini-tick' : 'meter-tick';
+    let html = '';
+    for (let i = 1; i <= 10; i++) {
+      const filled = i <= score;
+      html += `<span class="${tickClass} ${filled ? 'filled ' + cls : ''} ${filled ? 'anim' : ''}" style="animation-delay:${i * 25}ms"></span>`;
+    }
+    return html;
+  }
+
+  function showError(elId, message) {
+    $(elId).innerHTML = `<div class="error-banner">${message}</div>`;
+  }
+  function clearError(elId) { $(elId).innerHTML = ''; }
+
+  async function checkHealth() {
+    try {
+      const res = await fetch(`${baseUrl}/api/job-descriptions`);
+      if (!res.ok) throw new Error();
+      $('statusDot').classList.remove('offline');
+      $('statusText').textContent = 'connected';
+      return true;
+    } catch (e) {
+      $('statusDot').classList.add('offline');
+      $('statusText').textContent = 'not reachable';
+      return false;
+    }
+  }
+
+  $('baseUrlInput').addEventListener('change', (e) => {
+    baseUrl = e.target.value.replace(/\/$/, '');
+    checkHealth().then(() => { loadJobDescriptions(); loadResumes(); });
+  });
+
+  // ---------- JOB DESCRIPTIONS ----------
+  async function loadJobDescriptions() {
+    try {
+      const res = await fetch(`${baseUrl}/api/job-descriptions`);
+      jobDescriptions = await res.json();
+      renderJdList();
+    } catch (e) { /* handled by health check */ }
+  }
+
+  function renderJdList() {
+    const el = $('jdList');
+    if (!jobDescriptions.length) {
+      el.innerHTML = '<span class="empty-note">No job descriptions yet.</span>';
+      return;
+    }
+    el.innerHTML = jobDescriptions.map(jd => `
+      <span class="pill ${jd.id === selectedJdId ? 'selected' : ''}" data-jd="${jd.id}">
+        ${jd.title} <span class="mono" style="opacity:0.6;font-size:11px;">#${jd.id}</span>
+      </span>
+    `).join('');
+    el.querySelectorAll('.pill').forEach(p => {
+      p.addEventListener('click', () => {
+        selectedJdId = Number(p.dataset.jd);
+        renderJdList();
+        updateMatchState();
+      });
+    });
+  }
+
+  $('createJdBtn').addEventListener('click', async () => {
+    clearError('jdError');
+    const title = $('jdTitle').value.trim();
+    const description = $('jdDesc').value.trim();
+    if (!title || !description) {
+      showError('jdError', 'A role needs both a title and a description before it can be saved.');
+      return;
+    }
+    const btn = $('createJdBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    try {
+      const res = await fetch(`${baseUrl}/api/job-descriptions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description })
+      });
+      if (!res.ok) throw new Error((await res.json()).message || 'Could not save this job description.');
+      const jd = await res.json();
+      $('jdTitle').value = '';
+      $('jdDesc').value = '';
+      selectedJdId = jd.id;
+      await loadJobDescriptions();
+      updateMatchState();
+    } catch (e) {
+      showError('jdError', e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save job description';
+    }
+  });
+
+  // ---------- RESUMES ----------
+  async function loadResumes() {
+    try {
+      const res = await fetch(`${baseUrl}/api/resumes`);
+      resumes = await res.json();
+      renderResumeList();
+    } catch (e) { /* handled by health check */ }
+  }
+
+  function renderResumeList() {
+    const el = $('resumeList');
+    if (!resumes.length) {
+      el.innerHTML = '<span class="empty-note">No resumes uploaded yet.</span>';
+      return;
+    }
+    el.innerHTML = resumes.map(r => `
+      <span class="pill ${r.id === selectedResumeId ? 'selected' : ''}" data-resume="${r.id}">
+        ${r.candidateName} <span class="mono" style="opacity:0.6;font-size:11px;">#${r.id}</span>
+      </span>
+    `).join('');
+    el.querySelectorAll('.pill').forEach(p => {
+      p.addEventListener('click', () => {
+        selectedResumeId = Number(p.dataset.resume);
+        renderResumeList();
+        updateMatchState();
+      });
+    });
+  }
+
+  let chosenFile = null;
+  $('fileDrop').addEventListener('click', () => $('resumeFile').click());
+  $('resumeFile').addEventListener('change', (e) => {
+    chosenFile = e.target.files[0] || null;
+    if (chosenFile) {
+      $('fileDrop').classList.add('has-file');
+      $('fileDropLabel').textContent = `Selected: ${chosenFile.name}`;
+      $('uploadBtn').disabled = false;
+    }
+  });
+
+  $('uploadBtn').addEventListener('click', async () => {
+    clearError('uploadError');
+    if (!chosenFile) return;
+    const btn = $('uploadBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Extracting...';
+    $('extractResult').innerHTML = '';
+    try {
+      const formData = new FormData();
+      formData.append('file', chosenFile);
+      const res = await fetch(`${baseUrl}/api/resumes/upload`, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error((await res.json()).message || 'Could not extract this resume.');
+      const resume = await res.json();
+      selectedResumeId = resume.id;
+      renderExtractResult(resume);
+      await loadResumes();
+      updateMatchState();
+    } catch (e) {
+      showError('uploadError', e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Upload & extract';
+    }
+  });
+
+  function renderExtractResult(resume) {
+    let skills = [], experience = [], education = [];
+    try { skills = JSON.parse(resume.extractedSkillsJson || '[]'); } catch(e) {}
+    try { experience = JSON.parse(resume.extractedExperienceJson || '[]'); } catch(e) {}
+    try { education = JSON.parse(resume.extractedEducationJson || '[]'); } catch(e) {}
+
+    $('extractResult').innerHTML = `
+      <div class="extract-card">
+        <h3>Skills detected</h3>
+        <div class="pill-row">
+          ${skills.length ? skills.map(s => `<span class="pill skill">${s}</span>`).join('') : '<span class="empty-note">None detected.</span>'}
+        </div>
+        <h3>Experience</h3>
+        ${experience.length ? experience.map(exp => `
+          <div class="exp-item"><span class="role">${exp.title || 'Role'}</span> — ${exp.company || ''} ${exp.duration ? `(${exp.duration})` : ''}<br>
+          <span style="color:var(--text-dim)">${exp.description || ''}</span></div>
+        `).join('') : '<div class="empty-note">None detected.</div>'}
+        <h3>Education</h3>
+        ${education.length ? education.map(ed => `
+          <div class="edu-item">${ed.degree || ''} — ${ed.institution || ''} ${ed.year ? `(${ed.year})` : ''}</div>
+        `).join('') : '<div class="empty-note">None detected.</div>'}
+      </div>
+    `;
+  }
+
+  // ---------- MATCH ----------
+  function updateMatchState() {
+    const ready = selectedJdId && selectedResumeId;
+    $('matchBtn').disabled = !ready;
+    $('matchHint').textContent = ready
+      ? `Ready to match role #${selectedJdId} against candidate #${selectedResumeId}.`
+      : 'Select a role and a candidate above, then run the match.';
+    $('loadShortlistBtn').disabled = !selectedJdId;
+  }
+
+  $('matchBtn').addEventListener('click', async () => {
+    clearError('matchError');
+    const btn = $('matchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Scoring...';
+    $('matchResult').innerHTML = '';
+    try {
+      const res = await fetch(`${baseUrl}/api/match/${selectedResumeId}/${selectedJdId}`, { method: 'POST' });
+      if (!res.ok) throw new Error((await res.json()).message || 'Could not score this match.');
+      const match = await res.json();
+      renderMatchResult(match);
+    } catch (e) {
+      showError('matchError', e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run match';
+    }
+  });
+
+  function renderMatchResult(match) {
+    const cls = scoreClass(match.score);
+    $('matchResult').innerHTML = `
+      <div class="meter-row">
+        <div class="meter-block">
+          <div class="meter-score-line">
+            <span class="meter-score-num ${cls}">${match.score}</span>
+            <span class="meter-score-den">/ 10</span>
+          </div>
+          <div class="meter-ticks">${renderTicks(match.score, 'full')}</div>
+        </div>
+        <div class="justification">
+          <div class="justification-label">Assessment</div>
+          ${match.justification}
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;font-weight:600;">Matched skills</h3>
+        <div class="pill-row">
+          ${match.matchedSkills.length ? match.matchedSkills.map(s => `<span class="pill skill">${s}</span>`).join('') : '<span class="empty-note">None.</span>'}
+        </div>
+        <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin:12px 0 6px;font-weight:600;">Missing skills</h3>
+        <div class="pill-row">
+          ${match.missingSkills.length ? match.missingSkills.map(s => `<span class="pill skill missing">${s}</span>`).join('') : '<span class="empty-note">None.</span>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // ---------- SHORTLIST ----------
+  $('loadShortlistBtn').addEventListener('click', async () => {
+    clearError('shortlistError');
+    if (!selectedJdId) return;
+    const btn = $('loadShortlistBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Loading...';
+    $('shortlistResult').innerHTML = '';
+    try {
+      const res = await fetch(`${baseUrl}/api/match/shortlist?jobDescriptionId=${selectedJdId}&minScore=0`);
+      if (!res.ok) throw new Error('Could not load the shortlist.');
+      const list = await res.json();
+      renderShortlist(list);
+    } catch (e) {
+      showError('shortlistError', e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Load shortlist for selected role';
+    }
+  });
+
+  function renderShortlist(list) {
+    if (!list.length) {
+      $('shortlistResult').innerHTML = '<span class="empty-note">No matches run for this role yet — run a match above first.</span>';
+      return;
+    }
+    $('shortlistResult').innerHTML = list.map((row, i) => `
+      <div class="shortlist-row">
+        <span class="rank mono">${i + 1}</span>
+        <div class="mini-meter">
+          <span class="mini-score ${scoreClass(row.score)}">${row.score}</span>
+          <div class="mini-ticks">${renderTicks(row.score, 'mini')}</div>
+        </div>
+        <div>
+          <div class="shortlist-name">${row.candidateName}</div>
+          <div class="shortlist-just">${row.justification}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ---------- INIT ----------
+  (async function init() {
+    const ok = await checkHealth();
+    if (ok) { await loadJobDescriptions(); await loadResumes(); }
+    updateMatchState();
+  })();
+</script>
+
+</body>
+</html>

@@ -7,7 +7,7 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1",
-        "llm.gemini.api-key=test-key"
+        "llm.groq.api-key=test-key"
 })
 class SmartResumeScreenerApplicationTests {
 

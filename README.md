@@ -23,7 +23,7 @@ Client (curl / Postman)
 │                                   │                           │
 │                                   ▼                           │
 │                              LlmService                       │
-│                          (Gemini API)                          │
+│                           (Groq API)                           │
 └───────────────────────────────────────────────────────────┘
         │
         ▼
@@ -33,11 +33,11 @@ Client (curl / Postman)
 **Flow:**
 1. `POST /api/resumes/upload` — a PDF/txt resume is uploaded. `PdfTextExtractionService`
    (Apache PDFBox) pulls raw text out of the file.
-2. `ResumeExtractionService` sends that raw text to Gemini with a strict-JSON
+2. `ResumeExtractionService` sends that raw text to Groq with a strict-JSON
    extraction prompt, producing structured `skills`, `experience`, and `education`.
    The resume + extracted fields are persisted.
 3. `POST /api/job-descriptions` stores a job description.
-4. `POST /api/match/{resumeId}/{jdId}` sends the resume text and JD to Gemini with
+4. `POST /api/match/{resumeId}/{jdId}` sends the resume text and JD to Groq with
    a scoring prompt. The model returns a `score` (1–10), a `justification`,
    and matched/missing skill lists — all persisted as a `MatchResult`.
 5. `GET /api/match/shortlist?jobDescriptionId=..&minScore=..` returns candidates
@@ -48,7 +48,7 @@ Client (curl / Postman)
 - Java 17, Spring Boot 3.3 (Web, Data JPA, Validation)
 - H2 (file-based) — zero external DB setup required to run/evaluate
 - Apache PDFBox — PDF text extraction
-- Google Gemini API (free tier, no credit card) — semantic extraction & scoring
+- Groq API (free tier, no credit card) — semantic extraction & scoring
 - Lombok — boilerplate reduction
 
 ## Project Structure
@@ -56,11 +56,13 @@ Client (curl / Postman)
 ```
 src/main/java/com/screener/
 ├── SmartResumeScreenerApplication.java
-├── config/AppConfig.java              # RestTemplate bean
+├── config/
+│   ├── AppConfig.java                  # RestTemplate bean
+│   └── CorsConfig.java                 # allows the dashboard to call the API
 ├── controller/                        # REST endpoints
 ├── service/
 │   ├── PdfTextExtractionService.java  # PDF/text -> raw text
-│   ├── LlmService.java                # Gemini API client
+│   ├── LlmService.java                # Groq API client
 │   ├── ResumeExtractionService.java   # raw text -> structured JSON via LLM
 │   └── MatchingService.java           # resume + JD -> score via LLM
 ├── entity/                            # JPA entities
@@ -69,21 +71,37 @@ src/main/java/com/screener/
 └── exception/                         # centralized error handling
 ```
 
+## Frontend Dashboard (optional)
+
+A standalone dashboard lives at `frontend/index.html` — no build step, just open it
+in a browser once the API is running. It lets you create a job description,
+upload a resume, run a match, and view the shortlist, all visually instead of
+via curl. It talks to the API at `http://localhost:8080` by default (editable
+in the top bar if you run the backend on a different port).
+
+```bash
+# with the backend already running via `mvn spring-boot:run`:
+# Windows
+start frontend\index.html
+# Mac
+open frontend/index.html
+```
+
 ## Setup & Run
 
-**Prerequisites:** Java 17+, Maven 3.9+, a free Gemini API key.
+**Prerequisites:** Java 17+, Maven 3.9+, a free Groq API key.
 
-1. Get a free key (no credit card required) at https://aistudio.google.com/apikey
+1. Get a free key (no credit card required) at https://console.groq.com/keys
 2. Set it as an environment variable and run:
 
 ```bash
-export GEMINI_API_KEY=AIza...
+export GROQ_API_KEY=gsk_...
 mvn spring-boot:run
 ```
 
 The app starts on `http://localhost:8080`. The model used is configurable in
-`application.properties` via `llm.gemini.model` (defaults to `gemini-2.5-flash`,
-which is on Google's free tier).
+`application.properties` via `llm.groq.model` (defaults to `llama-3.3-70b-versatile`,
+which is on Groq's free tier).
 
 ## API Usage
 
@@ -136,4 +154,4 @@ LLM calls per shortlist request.
 - Database is file-based H2 (`./data/screener.mv.db`), created automatically on
   first run; no external DB install is needed to evaluate this project.
 - Swapping providers: `LlmService` is the single integration point — replacing
-  the Gemini call with an Anthropic or OpenAI call only requires changes in that one class.
+  the Groq call with an Anthropic, OpenAI, or Gemini call only requires changes in that one class.
